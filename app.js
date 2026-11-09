@@ -3,7 +3,7 @@
 import { ACCENTS, NATIVE_LANGUAGES, accentById, sentencesFor, readingFor } from './shared/sentences.js';
 import { practiceOrder } from './shared/coach.js';
 import { createProgress } from './progress.js';
-import { getPass, getSpeech, getWordPass, checkPassword, releasePass } from './pass.js';
+import { getPass, getSpeech, getWordPass, checkPassword, releasePass, checkIn } from './pass.js';
 import { sayWithCoachVoice } from './wordvoice.js';
 import { messageFor } from './messages.js';
 import { createTranscript, domSink } from './transcript.js';
@@ -262,6 +262,11 @@ function talk() {
   const focus = (visitFocus[choice.accent] || []);
   coach = createCoachState({ accent: choice.accent, done, focus });
   let passId = '';
+  // Every 30 s the page checks in, so its place stays held and it stops if the owner ended the session.
+  const alive = setInterval(async () => {
+    if (!passId || !conversation) return;
+    if ((await checkIn({ passId, password: progress.getPassword() })) === 'ended') stopTalking('ended');
+  }, testing && window.__aliveMs ? window.__aliveMs : 30_000);
   const ownKey = progress.getOwnKey();
   const loadSdk = testSdk();
   conversation = startConversation({
@@ -277,7 +282,8 @@ function talk() {
     onFocus: (sounds) => { visitFocus[choice.accent] = sounds; },
     onLevel: (l) => body.style.setProperty('--level', Number(l).toFixed(3)),
     onEnd: (reason) => {
-      releasePass({ passId, password: progress.getPassword() });
+      clearInterval(alive);
+      if (reason !== 'ended') releasePass({ passId, password: progress.getPassword() });
       passId = '';
       conversation = null;
       stopPlayback();

@@ -5,6 +5,7 @@ export function messageFor(code, { ownKey = false } = {}) {
   if (ownKey && code === 'quota') return { text: "Your Gemini key's free limit is used up for now.", settings: true };
   if (code === 'badkey') return { text: 'Your Gemini key was not accepted. Check it in Settings.', settings: true };
   switch (code) {
+    case 'ended': return { text: 'This practice session was ended by the owner of the website. Click the eye to start again.', settings: false };
     case 'password': return { text: 'That password is not right. Ask the person who shared this website.', settings: false };
     case 'quota': return { text: "The free key can't serve any more practice right now. You can create your own free Gemini key and add it in Settings.", settings: true, link: true };
     case 'daily': return { text: "You've used today's free practice time on the shared key. Create your own free Gemini key and add it in Settings, or come back tomorrow.", settings: true, link: true };

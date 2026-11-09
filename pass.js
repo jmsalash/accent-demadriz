@@ -52,6 +52,18 @@ export async function releasePass({ passId, password = '', base = SERVICE_URL, f
   try { await fetchImpl(`${base}/release`, { method: 'POST', headers: headers(password), body: JSON.stringify({ passId }), keepalive: true }); } catch { /* best effort */ }
 }
 
+// During a conversation the page checks in: 'ok', 'ended' (the owner ended it) or 'unknown'.
+export async function checkIn({ passId, password = '', base = SERVICE_URL, fetchImpl = (...a) => fetch(...a) }) {
+  if (!passId) return 'unknown';
+  try {
+    const res = await fetchImpl(`${base}/alive`, { method: 'POST', headers: headers(password), body: JSON.stringify({ passId }) });
+    const data = await res.json().catch(() => ({}));
+    return res.ok ? (data.ended ? 'ended' : 'ok') : 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
 // A one-minute pass for the coach's own voice to say the example of a word (when the speech service cannot).
 export async function getWordPass({ accent, ownKey = '', password = '', base = SERVICE_URL, fetchImpl = (...a) => fetch(...a) }) {
   try {
