@@ -23,7 +23,13 @@ export function createCoachState({ accent, done = [], focus = [] }) {
     : 'Start with the reading test: call show_reading and wait for the learner to read it.');
   const no = (reason) => ({ response: { ok: false, reason }, change: null });
   const upNext = () => practiceOrder(accent, { focus: focusSounds, done: finished });
-  const moved = () => { tries = 0; };
+  let skipped = false;  // the learner pressed Skip for the current word
+  const moved = () => { tries = 0; skipped = false; };
+  // After a wrong try the learner stays on the word: they listen to their recording and say it again, until a try is
+  // right (the coach says so with previous_right) or after 5 tries, or the learner skips it.
+  const MAX_TRIES = 5;
+  const held = (args) => current?.word && tries > 0 && tries < MAX_TRIES && !skipped && args.previous_right !== true;
+  const holdReason = () => `The learner has not said "${current.word}" right yet (try ${tries} of ${MAX_TRIES}). Do not tell the learner you are moving on. Give your feedback on that try if you have not, ask them to say "${current.word}" again, and wait. Only move on when a try is right (then pass previous_right: true) or after ${MAX_TRIES} tries.`;
   return {
     handle({ name, args = {} }) {
       if (name === 'show_reading') {
@@ -50,6 +56,7 @@ export function createCoachState({ accent, done = [], focus = [] }) {
         if (focusLeft.length && !focusSounds.includes(s.sound)) {
           return no(`Practise the learner's focus sounds first (${focusSounds.join(', ')}). Use one of: ${focusLeft.slice(0, 5).map((x) => x.id).join(', ')}.`);
         }
+        if (current?.id !== s.id && held(args)) return no(holdReason());
         if (current?.id !== s.id) moved();
         current = { id: s.id, text: s.text, word: null, sound: s.sound };
         return { response: { ok: true, text: s.text, sound: s.sound }, change: 'sentence' };
@@ -69,6 +76,7 @@ export function createCoachState({ accent, done = [], focus = [] }) {
           return no(`"${args.word}" is not in the sentence on screen. Words in the sentence: ${words.filter(Boolean).join(', ')}. Call focus_word again with one of them, then say that word.`);
         }
         const word = exact || near || String(args.word).replace(/[^\p{L}'-]/gu, '');
+        if (letters(word) !== letters(current.word) && held(args)) return no(holdReason());
         if (letters(word) !== letters(current.word)) moved();
         current = { ...current, word };
         return {
@@ -78,6 +86,7 @@ export function createCoachState({ accent, done = [], focus = [] }) {
       }
       if (name === 'sentence_done') {
         if (!list.some((x) => x.id === args.id)) return no(`unknown sentence id ${args.id}`);
+        if (held(args)) return no(holdReason());
         if (!finished.includes(args.id)) finished.push(args.id);
         return { response: { ok: true }, change: 'done' };
       }
@@ -85,6 +94,8 @@ export function createCoachState({ accent, done = [], focus = [] }) {
     },
     // One more try at the current word (or sentence).
     noteTry() { tries++; },
+    // The learner pressed Skip: the coach may move on from this word.
+    noteSkip() { skipped = true; },
     // The speech recogniser heard the learner while the reading text was on screen.
     noteSpoken() { if (current?.reading) readingSpoken = true; },
     get tries() { return tries; },

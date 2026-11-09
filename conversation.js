@@ -292,6 +292,7 @@ export function startConversation({ getPass, transcript, coach, clips, onState, 
     next() {
       if (c.ended || !c.live) return;
       c.you = []; c.youVoice = false;
+      coach.noteSkip?.();
       c.live.say('[Note from the website: the learner pressed "Next". Move on to the next word that needs work, or the next sentence.]');
       setState('thinking');
       onScreen('turn');

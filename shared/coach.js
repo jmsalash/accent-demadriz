@@ -2,6 +2,7 @@
 import { NATIVE_LANGUAGES, accentById, sentencesFor, soundsFor, readingFor } from './sentences.js';
 
 const str = (description) => ({ type: 'STRING', description });
+const RIGHT = { type: 'BOOLEAN', description: 'true only when the learner\'s last try at the word being practised was right. While a try is still wrong, the website keeps the learner on that word (up to 5 tries).' };
 
 export const COACH_TOOLS = Object.freeze([
   { name: 'show_reading', description: 'Show the reading test (a short text of several lines) on the learner\'s screen. Call it before asking them to read it.',
@@ -9,11 +10,11 @@ export const COACH_TOOLS = Object.freeze([
   { name: 'set_focus', description: 'Save the sounds the learner needs to work on most, after hearing the reading test. Use the exact sound names from your list.',
     parameters: { type: 'OBJECT', properties: { sounds: { type: 'ARRAY', items: { type: 'STRING' }, description: 'One to three sound names, most important first.' } }, required: ['sounds'] } },
   { name: 'show_sentence', description: 'Show this practice sentence on the learner\'s screen. Call it before asking them to read a sentence.',
-    parameters: { type: 'OBJECT', properties: { id: str('The sentence id, for example en-GB-01.') }, required: ['id'] } },
+    parameters: { type: 'OBJECT', properties: { id: str('The sentence id, for example en-GB-01.'), previous_right: RIGHT }, required: ['id'] } },
   { name: 'focus_word', description: 'Highlight the word you are about to practise with the learner. The screen then offers a clear recording of that word, so the learner can compare it with their own.',
-    parameters: { type: 'OBJECT', properties: { word: str('One word from the sentence on screen, written exactly as in the sentence.') }, required: ['word'] } },
+    parameters: { type: 'OBJECT', properties: { word: str('One word from the sentence on screen, written exactly as in the sentence.'), previous_right: RIGHT }, required: ['word'] } },
   { name: 'sentence_done', description: 'Mark the sentence as finished, before moving to the next one.',
-    parameters: { type: 'OBJECT', properties: { id: str('The sentence id.') }, required: ['id'] } },
+    parameters: { type: 'OBJECT', properties: { id: str('The sentence id.'), previous_right: RIGHT }, required: ['id'] } },
 ]);
 
 export const MAX_FOCUS = 3;
@@ -62,7 +63,7 @@ How drilling works:
 1. When the learner reads a sentence, listen carefully. Pick the one word whose sound needs the most work, ideally one with their focus sounds, copying it exactly as written in the sentence. Call focus_word with that word and wait for its answer before saying it (if it answers with a note or a refusal, follow it), then say the word clearly and slowly yourself, give one short, concrete tip (where the tongue, lips or teeth go), and ask them to say it.
 2. After each try, give honest feedback in one or two short sentences: say exactly what you heard (for example "your th sounded like a t" or "the vowel was too short") and what to change. Then ask them to say it again, in a few words, and wait. Never tell the learner to listen to or compare the recordings: the recordings are on screen to play whenever they like.
 3. Before giving feedback, check that the learner said the word you asked for. If they said a different word, say so plainly ("that was not 'through', please say 'through'") and do not judge it as a try.
-4. When a try is right, say so honestly and move on straight away: call focus_word for the next word (or sentence_done and show_sentence); the screen follows and the learner can say it. If it is not right yet, give feedback and ask them to try again. You decide when to move on; the learner never has to press anything. They can press Next to skip; a website note tells you when. Moving on means: the next word that needs work in the same sentence, at most 3 words per sentence, then call sentence_done and show_sentence with the next sentence.
+4. When a try is right, say so honestly and move on straight away: call focus_word for the next word (or sentence_done and show_sentence); the screen follows and the learner can say it. If it is not right yet, give feedback and ask them to say it again; never move on after a wrong try (the website refuses it, up to 5 tries): the learner listens to their recording and tries again. When you move on after a right try, pass previous_right: true. You decide when to move on; the learner never has to press anything. They can press Next to skip; a website note tells you when. Moving on means: the next word that needs work in the same sentence, at most 3 words per sentence, then call sentence_done and show_sentence with the next sentence.
 5. If after 5 tries a word is still not right, say so honestly, give one last tip, and move on.
 6. Never say you are moving on without doing it, and do it before you speak: when a try is right (or after 5 tries), first call focus_word for the next word (or sentence_done and then show_sentence), wait for its answer, and only then speak, once: a short verdict on the try, then the new word and its tip. Saying it is not enough, the screen only changes when you call the tool. After any tool answer, never say again what you already said.
 

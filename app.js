@@ -166,6 +166,27 @@ function askCoachRecording(accent) {
   });
 }
 
+// When the coach's recording cannot be made (for example the speech service's free allowance is used up), the
+// browser's own voice says the word in the chosen accent instead.
+const SPEECH_LANG = { 'en-GB': 'en-GB', 'en-US': 'en-US', 'es-ES': 'es-ES', 'es-419': 'es-MX' };
+const canSpeak = () => typeof window.speechSynthesis?.speak === 'function' && typeof window.SpeechSynthesisUtterance === 'function';
+
+function speakWithBrowser(text, accent) {
+  stopPlayback();
+  const lang = SPEECH_LANG[accent] || 'en-GB';
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = lang;
+  u.rate = 0.85;
+  const voices = window.speechSynthesis.getVoices?.() || [];
+  u.voice = voices.find((v) => v.lang === lang) || voices.find((v) => v.lang?.startsWith(lang.slice(0, 2))) || null;
+  conversation?.pause();
+  const key = coach?.key;
+  playing = { clip: { kind: 'browser', key }, stop: () => window.speechSynthesis.cancel() };
+  u.onend = u.onerror = () => { if (playing?.clip.kind === 'browser') stopPlayback(); };
+  window.speechSynthesis.speak(u);
+  renderAttempts();
+}
+
 function retryCoachRecording() {
   const choice = currentChoice();
   if (!choice || !coach?.key) return;
@@ -192,7 +213,15 @@ function renderAttempts() {
   if (!coach.current.reading && !hasCoach) {
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'clip gemini';
-    if (waiting) { b.disabled = true; b.textContent = 'Coach…'; } else { b.textContent = 'Coach: tap to load'; b.title = "The coach's recording could not be made; tap to try again"; b.addEventListener('click', retryCoachRecording); }
+    if (waiting) { b.disabled = true; b.textContent = 'Coach…'; }
+    else if (canSpeak()) {
+      const text = coach.current.word || coach.current.text;
+      const on = playing?.clip.kind === 'browser' && playing.clip.key === key;
+      b.textContent = 'Play coach';
+      b.title = "Said by this browser's voice (the coach's recording could not be made)";
+      if (on) b.classList.add('playing');
+      b.addEventListener('click', () => (on ? stopPlayback() : speakWithBrowser(text, currentChoice()?.accent)));
+    } else { b.textContent = 'Coach: tap to load'; b.title = "The coach's recording could not be made; tap to try again"; b.addEventListener('click', retryCoachRecording); }
     box.append(b);
   }
   for (const clip of list) {
@@ -212,8 +241,10 @@ function stopPlayback() {
   if (!playing) return;
   const p = playing;
   playing = null;
-  try { p.source.onended = null; p.source.stop(); } catch { /* already ended */ }
-  p.ctx.close().catch(() => {});
+  if (p.stop) { try { p.stop(); } catch { /* gone */ } } else {
+    try { p.source.onended = null; p.source.stop(); } catch { /* already ended */ }
+    p.ctx.close().catch(() => {});
+  }
   conversation?.resume();
   renderAttempts();
 }
