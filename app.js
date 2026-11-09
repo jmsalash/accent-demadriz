@@ -384,7 +384,7 @@ function init() {
 
   showKey();
   if (progress.getPassword()) enterSite(); else showGate();
-  if (testing) window.__ac = { transcript, clips, get coach() { return coach; }, get conversation() { return conversation; }, renderPractice, showMessage };
+  if (testing) window.__ac = { transcript, clips, progress, get coach() { return coach; }, get conversation() { return conversation; }, renderPractice, showMessage };
 }
 
 init();
