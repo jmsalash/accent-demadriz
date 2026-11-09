@@ -112,7 +112,7 @@ export function startConversation({ getPass, transcript, coach, clips, onState, 
   // The coach saying it moves on ("let's move on to the next word") without calling the tool leaves the old word on
   // screen and the learner stuck. The website keeps track of each answer: what the coach said, whether it moved the
   // screen, and whether it finished a sentence without showing the next one. If it did not move, it is told once.
-  const MOVING = /\b(let'?s move on|let us move on|moving on|move on to|on to the next|the next (word|sentence))|\b(pasemos|pasamos a|vamos (a|con) la siguiente|siguiente (palabra|frase|oraci))/i;
+  const MOVING = /\b(let'?s move on|let us move on|moving on|move on to|on to the next|the next (word|sentence))|\b(pasemos|pasamos a|vamos (a|con) la siguiente|siguiente (palabra|frase|oraci))|\b(passons|on passe|mot suivant|phrase suivante)|\b(volgende (woord|zin)|we gaan verder|laten we doorgaan)|\b(passiamo|prossima (parola|frase)|andiamo avanti)/i;
   // Gemini often says "let's move on" in one message and calls the tool in the next, so the website first waits a
   // moment (after the coach's voice has finished) and only reminds it if the screen still has not changed.
   const checkMove = () => {
@@ -144,6 +144,20 @@ export function startConversation({ getPass, transcript, coach, clips, onState, 
       : `[Note from the website: you said you are moving on, but the screen still shows "${cur.word || cur.text}". Do it now: call focus_word with the next word that needs work, or sentence_done and show_sentence. Do not repeat your feedback.]`);
   };
 
+  // The coach praising a try that the speech recogniser wrote as another word ("tree" for "three"): it is told, once
+  // per try, so it corrects itself instead of letting a wrong sound pass.
+  const PRAISE = /\b(right|correct|well done|good|great|perfect|excellent|nice|exactly|bien|correcto|perfecto|muy bien|bravo|parfait|très bien|goed|prima|uitstekend|giusto|esatto|perfetto|bene)\b/i;
+  const DOUBT = /\b(not|no|isn'?t|wasn'?t|still|almost|closer|nearly|quite|todavía|casi|pas|encore|presque|niet|nog|bijna|non|ancora|quasi)\b/i;
+  const checkPraise = () => {
+    const word = coach.current?.word, heard = coach.heardOther;
+    if (!word || !heard || c.praiseNoted || !c.tried) return false;
+    const said = c.turnSaid || '';
+    if (!PRAISE.test(said) || DOUBT.test(said)) return false;
+    c.praiseNoted = true;
+    c.live.say(`[Note from the website: the speech recogniser heard "${heard}", not "${word}". That usually means the sound was not right. If you told the learner it was right, correct yourself in one short sentence, say what you heard, and ask them to say "${word}" again.]`);
+    return true;
+  };
+
   function onFrame(f32) {
     if (c.ended || c.paused || !c.introDone || !c.live) return;
     // One speaks at a time: while the coach talks (and a moment after, for its echo) the microphone is not sent, so
@@ -157,6 +171,7 @@ export function startConversation({ getPass, transcript, coach, clips, onState, 
       c.youVoice = true;
       c.youKey = coach.key;
       stopWaitingForMove(); // the learner carries on: they are not stuck
+      coach.noteHeard?.(''); c.praiseNoted = false;
     }
     if (c.you.length < MAX_TRY_FRAMES) c.you.push(f32);
   }
@@ -217,6 +232,7 @@ export function startConversation({ getPass, transcript, coach, clips, onState, 
         if (!c.introDone) break;
         c.youText = m.text;
         coach.noteSpoken();
+        coach.noteHeard?.(m.text);
         transcript.you(m.text);
         if (c.state === 'listening') setState('thinking');
         break;
@@ -236,6 +252,7 @@ export function startConversation({ getPass, transcript, coach, clips, onState, 
         // A different word than the one drilled: the coach answers again before the learner's turn.
         // A move the coach announced but has not made yet is waited for in the background: the learner's turn
         // starts straight away all the same.
+        if (checkPraise()) { c.turnSaid = ''; c.turnMoved = false; c.turnFinished = false; c.youText = ''; break; }
         if (!(c.introDone && checkMove())) {
           if (c.tried && checkWord()) { c.youText = ''; break; }
           if (checkReading()) { c.youText = ''; break; }

@@ -24,12 +24,16 @@ export function createCoachState({ accent, done = [], focus = [] }) {
   const no = (reason) => ({ response: { ok: false, reason }, change: null });
   const upNext = () => practiceOrder(accent, { focus: focusSounds, done: finished });
   let skipped = false;  // the learner pressed Skip for the current word
-  const moved = () => { tries = 0; skipped = false; };
+  let heardOther = '';  // the speech recogniser wrote the last try as another word ("tree" for "three")
+  const moved = () => { tries = 0; skipped = false; heardOther = ''; };
   // After a wrong try the learner stays on the word: they listen to their recording and say it again, until a try is
   // right (the coach says so with previous_right) or after 5 tries, or the learner skips it.
   const MAX_TRIES = 5;
-  const held = (args) => current?.word && tries > 0 && tries < MAX_TRIES && !skipped && args.previous_right !== true;
-  const holdReason = () => `The learner has not said "${current.word}" right yet (try ${tries} of ${MAX_TRIES}). Do not tell the learner you are moving on. Give your feedback on that try if you have not, ask them to say "${current.word}" again, and wait. Only move on when a try is right (then pass previous_right: true) or after ${MAX_TRIES} tries.`;
+  const misheard = (args) => args.previous_right === true && current?.word && heardOther;
+  const held = (args) => misheard(args) || (current?.word && tries > 0 && tries < MAX_TRIES && !skipped && args.previous_right !== true);
+  const holdReason = (args = {}) => (misheard(args)
+    ? `The speech recogniser heard "${heardOther}", not "${current.word}": that try was not right. Do not say it was right. Tell the learner honestly what you heard, and ask them to say "${current.word}" again.`
+    : `The learner has not said "${current.word}" right yet (try ${tries} of ${MAX_TRIES}). Do not tell the learner you are moving on. Give your feedback on that try if you have not, ask them to say "${current.word}" again, and wait. Only move on when a try is right (then pass previous_right: true) or after ${MAX_TRIES} tries.`);
   return {
     handle({ name, args = {} }) {
       if (name === 'show_reading') {
@@ -56,7 +60,7 @@ export function createCoachState({ accent, done = [], focus = [] }) {
         if (focusLeft.length && !focusSounds.includes(s.sound)) {
           return no(`Practise the learner's focus sounds first (${focusSounds.join(', ')}). Use one of: ${focusLeft.slice(0, 5).map((x) => x.id).join(', ')}.`);
         }
-        if (current?.id !== s.id && held(args)) return no(holdReason());
+        if (current?.id !== s.id && held(args)) return no(holdReason(args));
         if (current?.id !== s.id) moved();
         current = { id: s.id, text: s.text, word: null, sound: s.sound };
         return { response: { ok: true, text: s.text, sound: s.sound }, change: 'sentence' };
@@ -76,7 +80,7 @@ export function createCoachState({ accent, done = [], focus = [] }) {
           return no(`"${args.word}" is not in the sentence on screen. Words in the sentence: ${words.filter(Boolean).join(', ')}. Call focus_word again with one of them, then say that word.`);
         }
         const word = exact || near || String(args.word).replace(/[^\p{L}'-]/gu, '');
-        if (letters(word) !== letters(current.word) && held(args)) return no(holdReason());
+        if (letters(word) !== letters(current.word) && held(args)) return no(holdReason(args));
         if (letters(word) !== letters(current.word)) moved();
         current = { ...current, word };
         return {
@@ -86,7 +90,7 @@ export function createCoachState({ accent, done = [], focus = [] }) {
       }
       if (name === 'sentence_done') {
         if (!list.some((x) => x.id === args.id)) return no(`unknown sentence id ${args.id}`);
-        if (held(args)) return no(holdReason());
+        if (held(args)) return no(holdReason(args));
         if (!finished.includes(args.id)) finished.push(args.id);
         return { response: { ok: true }, change: 'done' };
       }
@@ -96,6 +100,15 @@ export function createCoachState({ accent, done = [], focus = [] }) {
     noteTry() { tries++; },
     // The learner pressed Skip: the coach may move on from this word.
     noteSkip() { skipped = true; },
+    // What the speech recogniser wrote for the learner's try ('' when a new try starts). A different spelling of the
+    // word being practised ("tree" for "three") means the sound was not right. Numbers and empty text say nothing.
+    noteHeard(text) {
+      const tokens = String(text || '').split(/\s+/).map((t) => t.replace(/[^\p{L}\p{N}'-]/gu, '')).filter(Boolean);
+      const want = letters(current?.word);
+      if (!want || !tokens.length || tokens.some((t) => /\p{N}/u.test(t)) || tokens.some((t) => letters(t) === want)) { heardOther = ''; return; }
+      heardOther = tokens.map((t) => ({ t, sim: similarity(letters(t), want) })).sort((a, b) => b.sim - a.sim)[0].t;
+    },
+    get heardOther() { return heardOther; },
     // The speech recogniser heard the learner while the reading text was on screen.
     noteSpoken() { if (current?.reading) readingSpoken = true; },
     get tries() { return tries; },

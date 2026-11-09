@@ -168,7 +168,7 @@ function askCoachRecording(accent) {
 
 // When the coach's recording cannot be made (for example the speech service's free allowance is used up), the
 // browser's own voice says the word in the chosen accent instead.
-const SPEECH_LANG = { 'en-GB': 'en-GB', 'en-US': 'en-US', 'es-ES': 'es-ES', 'es-419': 'es-MX' };
+const SPEECH_LANG = { 'en-GB': 'en-GB', 'en-US': 'en-US', 'es-ES': 'es-ES', 'es-419': 'es-MX', 'fr-FR': 'fr-FR', 'nl-NL': 'nl-NL', 'it-IT': 'it-IT' };
 const canSpeak = () => typeof window.speechSynthesis?.speak === 'function' && typeof window.SpeechSynthesisUtterance === 'function';
 
 function speakWithBrowser(text, accent) {
