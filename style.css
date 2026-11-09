@@ -85,6 +85,8 @@ button { font: inherit; cursor: pointer; }
 .practice > * { flex: none; }
 body[data-screen="practice"] .practice { display: flex; }
 body[data-screen="practice"] .start { display: none; }
+/* Until the page knows which screen to show (password or not), only the eye shows. */
+body[data-screen="loading"] #start { display: none; }
 .gate { display: none; }
 body[data-screen="password"] .gate { display: block; }
 body[data-screen="password"] #start { display: none; }

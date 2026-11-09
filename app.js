@@ -3,7 +3,7 @@
 import { ACCENTS, NATIVE_LANGUAGES, accentById, sentencesFor, readingFor } from './shared/sentences.js';
 import { practiceOrder } from './shared/coach.js';
 import { createProgress } from './progress.js';
-import { getPass, getSpeech, getWordPass, checkPassword } from './pass.js';
+import { getPass, getSpeech, getWordPass, checkPassword, releasePass } from './pass.js';
 import { sayWithCoachVoice } from './wordvoice.js';
 import { messageFor } from './messages.js';
 import { createTranscript, domSink } from './transcript.js';
@@ -261,10 +261,12 @@ function talk() {
   const done = progress.getDone(choice.accent);
   const focus = (visitFocus[choice.accent] || []);
   coach = createCoachState({ accent: choice.accent, done, focus });
+  let passId = '';
   const ownKey = progress.getOwnKey();
   const loadSdk = testSdk();
   conversation = startConversation({
-    getPass: () => getPass({ ...choice, focus, done, ownKey, password: progress.getPassword() }),
+    // The pass's id, so its place on the site's key is given back as soon as this conversation ends.
+    getPass: async () => { const p = await getPass({ ...choice, focus, done, ownKey, password: progress.getPassword() }); passId = p?.passId || ''; return p; },
     transcript,
     coach,
     clips,
@@ -275,6 +277,8 @@ function talk() {
     onFocus: (sounds) => { visitFocus[choice.accent] = sounds; },
     onLevel: (l) => body.style.setProperty('--level', Number(l).toFixed(3)),
     onEnd: (reason) => {
+      releasePass({ passId, password: progress.getPassword() });
+      passId = '';
       conversation = null;
       stopPlayback();
       setState('idle');

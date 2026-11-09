@@ -39,11 +39,17 @@ export async function getPass({ native, accent, focus = [], done = [], ownKey = 
       method: 'POST', headers: headers(password), body: JSON.stringify({ native, accent, focus, done }),
     });
     const data = await res.json().catch(() => ({}));
-    if (res.ok && data.token) return { token: data.token, model: data.model, minutes: data.minutes || 10 };
+    if (res.ok && data.token) return { token: data.token, model: data.model, minutes: data.minutes || 10, ...(data.passId ? { passId: data.passId } : {}) };
     return { error: data.error || 'offline' };
   } catch {
     return { error: 'offline' };
   }
+}
+
+// The conversation has ended: its place on the site's key is given back at once (it survives the page closing).
+export async function releasePass({ passId, password = '', base = SERVICE_URL, fetchImpl = (...a) => fetch(...a) }) {
+  if (!passId) return;
+  try { await fetchImpl(`${base}/release`, { method: 'POST', headers: headers(password), body: JSON.stringify({ passId }), keepalive: true }); } catch { /* best effort */ }
 }
 
 // A one-minute pass for the coach's own voice to say the example of a word (when the speech service cannot).

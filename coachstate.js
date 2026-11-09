@@ -19,7 +19,7 @@ export function createCoachState({ accent, done = [], focus = [] }) {
   const hasRead = () => tries > 0 || readingSpoken;
   const notReadYet = () => !readingHeard && (current?.reading ? !hasRead() : true);
   const readFirst = () => (current?.reading
-    ? 'The learner has not read the text yet. Keep the reading text on screen, ask them to read it all aloud, and wait for them.'
+    ? 'The learner has not read the text yet. Keep the reading text on screen and wait for them to read it. Say nothing more now: do not greet again and do not give any feedback.'
     : 'Start with the reading test: call show_reading and wait for the learner to read it.');
   const no = (reason) => ({ response: { ok: false, reason }, change: null });
   const upNext = () => practiceOrder(accent, { focus: focusSounds, done: finished });
@@ -40,7 +40,7 @@ export function createCoachState({ accent, done = [], focus = [] }) {
         current = { id: 'reading', text: readingFor(accent).join('\n'), word: null, reading: true };
         readingSpoken = false;
         moved();
-        return { response: { ok: true }, change: 'sentence' };
+        return { response: { ok: true, next: 'The text is on screen. Greet the learner once, in one short sentence, ask them to read it all aloud, then stop and wait. Call no other tool until they have read it.' }, change: 'sentence' };
       }
       if (name === 'set_focus') {
         if (!current?.reading || !hasRead()) return no(readFirst());
