@@ -1,7 +1,10 @@
 // The conversation written out as it is spoken: one growing line per speaker per turn.
 // The sink draws it: add(role) -> line handle, update(handle, text), clear().
 // Sentence ids (like en-GB-02) are for the coach's tools only; if the coach says one, it is left out of the transcript.
+// The coach sometimes speaks a tool call ("call: show_sentence {id: ...}"); that is left out too.
+const TOOLS = '(?:show_reading|set_focus|show_sentence|focus_word|sentence_done)';
 export const cleanText = (text) => String(text || '')
+  .replace(new RegExp(`(?:\\bcall\\s*:?\\s*)?\\b${TOOLS}\\s*(?:\\{[^}]*\\}?|\\([^)]*\\)?)?`, 'gi'), '')
   .replace(/[([]?\b(?:en|es)\s*[-/ ]\s*(?:gb|us|es|419)\s*[-/ ]\s*\d{1,2}\b[)\]]?\s*:?/gi, '')
   .replace(/\s{2,}/g, ' ').replace(/\s+([.,!?;:])/g, '$1').trim();
 

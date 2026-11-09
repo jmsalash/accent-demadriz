@@ -148,6 +148,14 @@ export function startConversation({ getPass, transcript, coach, clips, onState, 
   // per try, so it corrects itself instead of letting a wrong sound pass.
   const PRAISE = /\b(right|correct|well done|good|great|perfect|excellent|nice|exactly|bien|correcto|perfecto|muy bien|bravo|parfait|très bien|goed|prima|uitstekend|giusto|esatto|perfetto|bene)\b/i;
   const DOUBT = /\b(not|no|isn'?t|wasn'?t|still|almost|closer|nearly|quite|todavía|casi|pas|encore|presque|niet|nog|bijna|non|ancora|quasi)\b/i;
+  // The coach speaking a tool call aloud instead of calling it: it is told once per turn.
+  const SPOKEN_TOOL = /\b(show_reading|set_focus|show_sentence|focus_word|sentence_done)\b/i;
+  const checkSpokenTool = () => {
+    const m = (c.turnSaid || '').match(SPOKEN_TOOL);
+    if (!m) return false;
+    c.live.say(`[Note from the website: you said a tool call out loud ("${m[1]}"). Never say tool names, ids or arguments: the learner hears everything you say. If you meant to call ${m[1]}, call it now without saying it, and do not repeat what you already said.]`);
+    return true;
+  };
   const checkPraise = () => {
     const word = coach.current?.word, heard = coach.heardOther;
     if (!word || !heard || c.praiseNoted || !c.tried) return false;
@@ -163,11 +171,22 @@ export function startConversation({ getPass, transcript, coach, clips, onState, 
     // One speaks at a time: while the coach talks (and a moment after, for its echo) the microphone is not sent, so
     // the coach is never cut off half-way or answers its own voice, which led to repeated and mixed-up feedback.
     const now = Date.now();
-    if (player.playing) { c.coachUntil = now + ECHO_MS; return; }
-    if (now < (c.coachUntil || 0)) return;
+    if (player.playing) { c.coachUntil = now + ECHO_MS; c.held = []; return; }
+    // Just after the coach: frames are held back, in case they are its echo. If the learner is still speaking once the
+    // moment has passed, they started early: the held frames are the start of their word and are kept.
+    if (now < (c.coachUntil || 0)) { if ((c.held ||= []).length < 6) c.held.push(f32); return; }
+    if (c.held?.length) {
+      const held = c.held; c.held = [];
+      if (rms(f32) >= VOICE_LEVEL && held.some((h) => rms(h) >= VOICE_LEVEL)) for (const h of held) take(h);
+    }
+    take(f32);
+  }
+
+  function take(f32) {
     c.live.sendAudio(f32, ctx.sampleRate);
     if (!c.youVoice) {
-      if (rms(f32) < VOICE_LEVEL) { c.you = [f32]; return; } // keep one frame of lead-in
+      // Keep up to 0.2 s of lead-in: quiet starts like "th" or "s" are below the voice level.
+      if (rms(f32) < VOICE_LEVEL) { c.you = [...c.you.slice(-1), f32]; return; }
       c.youVoice = true;
       c.youKey = coach.key;
       stopWaitingForMove(); // the learner carries on: they are not stuck
@@ -252,6 +271,7 @@ export function startConversation({ getPass, transcript, coach, clips, onState, 
         // A different word than the one drilled: the coach answers again before the learner's turn.
         // A move the coach announced but has not made yet is waited for in the background: the learner's turn
         // starts straight away all the same.
+        if (checkSpokenTool()) { c.turnSaid = ''; c.turnMoved = false; c.turnFinished = false; c.youText = ''; break; }
         if (checkPraise()) { c.turnSaid = ''; c.turnMoved = false; c.turnFinished = false; c.youText = ''; break; }
         if (!(c.introDone && checkMove())) {
           if (c.tried && checkWord()) { c.youText = ''; break; }

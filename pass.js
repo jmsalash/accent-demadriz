@@ -2,7 +2,7 @@
 // carries the password. With the learner's own key the browser asks Gemini itself and the service is never called.
 import { mintToken, geminiError } from './shared/gemini.js';
 import { buildCoachInstructions, COACH_TOOLS } from './shared/coach.js';
-import { speak } from './shared/speech.js';
+import { speak, wordVoiceInstructions } from './shared/speech.js';
 import { OWN_KEY_MINUTES } from './shared/settings.js';
 import { SERVICE_URL } from './config.js';
 
@@ -40,6 +40,22 @@ export async function getPass({ native, accent, focus = [], done = [], ownKey = 
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.token) return { token: data.token, model: data.model, minutes: data.minutes || 10 };
+    return { error: data.error || 'offline' };
+  } catch {
+    return { error: 'offline' };
+  }
+}
+
+// A one-minute pass for the coach's own voice to say the example of a word (when the speech service cannot).
+export async function getWordPass({ accent, ownKey = '', password = '', base = SERVICE_URL, fetchImpl = (...a) => fetch(...a) }) {
+  try {
+    if (ownKey) {
+      const { token, model } = await mintToken({ apiKey: ownKey, instructions: wordVoiceInstructions(accent), sessionMinutes: 1, fetchImpl });
+      return { token, model };
+    }
+    const res = await fetchImpl(`${base}/word-pass`, { method: 'POST', headers: headers(password), body: JSON.stringify({ accent }) });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.token) return { token: data.token, model: data.model };
     return { error: data.error || 'offline' };
   } catch {
     return { error: 'offline' };

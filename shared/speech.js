@@ -16,6 +16,13 @@ export function speechPrompt(accent, text) {
   return `${a.voiceNote} Say ${one ? 'this single word, once, clearly and at a slightly slow, natural pace, with nothing before or after it' : 'this sentence once, clearly and at a natural pace'}: ${t}`;
 }
 
+// What the coach's own Live voice is told when it only says the example of a word.
+export function wordVoiceInstructions(accent) {
+  const a = accentById(accent);
+  if (!a) throw new Error('unknown accent');
+  return `You are the voice of an accent coach. ${a.voiceNote} When the user sends a word or a sentence, say exactly that, once, clearly and at a slightly slow, natural pace, with nothing before or after it. Never add words, never answer questions, never comment.`;
+}
+
 export async function speak({ apiKey, accent, text, voice = DEFAULT_VOICE, fetchImpl = (...a) => fetch(...a) }) {
   const body = JSON.stringify({
     contents: [{ parts: [{ text: speechPrompt(accent, text) }] }],

@@ -3,7 +3,8 @@
 import { ACCENTS, NATIVE_LANGUAGES, accentById, sentencesFor, readingFor } from './shared/sentences.js';
 import { practiceOrder } from './shared/coach.js';
 import { createProgress } from './progress.js';
-import { getPass, getSpeech, checkPassword } from './pass.js';
+import { getPass, getSpeech, getWordPass, checkPassword } from './pass.js';
+import { sayWithCoachVoice } from './wordvoice.js';
 import { messageFor } from './messages.js';
 import { createTranscript, domSink } from './transcript.js';
 import { createClips } from './clips.js';
@@ -28,6 +29,9 @@ const failed = new Set(); // words whose clear recording could not be made (the 
 // The sounds this visit's reading test found. Kept only while the page is open: every visit starts with the reading
 // test, so the coach never judges from an earlier session.
 const visitFocus = {};
+
+// In the page's own checks, a stand-in for Gemini Live.
+const testSdk = () => (testing && window.__fakeSdk ? async () => window.__fakeSdk : undefined);
 
 const letters = (s) => s.toLowerCase().replace(/[^\p{L}'-]/gu, '');
 
@@ -159,32 +163,16 @@ function askCoachRecording(accent) {
   if (asked.has(key) || failed.has(key)) return;
   asked.add(key);
   const text = cur.word || cur.text;
-  getSpeech({ accent, text, ownKey: progress.getOwnKey(), password: progress.getPassword(), onPassword: () => showGate('password') }).then((audio) => {
-    asked.delete(key);
-    if (audio) clips.addGemini([audio], key); else failed.add(key);
-    if (coach?.key === key) renderAttempts();
-  });
-}
-
-// When the coach's recording cannot be made (for example the speech service's free allowance is used up), the
-// browser's own voice says the word in the chosen accent instead.
-const SPEECH_LANG = { 'en-GB': 'en-GB', 'en-US': 'en-US', 'es-ES': 'es-ES', 'es-419': 'es-MX', 'fr-FR': 'fr-FR', 'nl-NL': 'nl-NL', 'it-IT': 'it-IT' };
-const canSpeak = () => typeof window.speechSynthesis?.speak === 'function' && typeof window.SpeechSynthesisUtterance === 'function';
-
-function speakWithBrowser(text, accent) {
-  stopPlayback();
-  const lang = SPEECH_LANG[accent] || 'en-GB';
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = lang;
-  u.rate = 0.85;
-  const voices = window.speechSynthesis.getVoices?.() || [];
-  u.voice = voices.find((v) => v.lang === lang) || voices.find((v) => v.lang?.startsWith(lang.slice(0, 2))) || null;
-  conversation?.pause();
-  const key = coach?.key;
-  playing = { clip: { kind: 'browser', key }, stop: () => window.speechSynthesis.cancel() };
-  u.onend = u.onerror = () => { if (playing?.clip.kind === 'browser') stopPlayback(); };
-  window.speechSynthesis.speak(u);
-  renderAttempts();
+  const ownKey = progress.getOwnKey(), password = progress.getPassword();
+  getSpeech({ accent, text, ownKey, password, onPassword: () => showGate('password') })
+    // When the speech service cannot make it (its free allowance is used up, for example), the coach's own Live voice
+    // says it: the same voice as the conversation.
+    .then((audio) => (audio ? [audio] : sayWithCoachVoice({ getPass: () => getWordPass({ accent, ownKey, password }), text, loadSdk: testSdk() })))
+    .then((chunks) => {
+      asked.delete(key);
+      if (chunks?.length) clips.addGemini(chunks, key); else failed.add(key);
+      if (coach?.key === key) renderAttempts();
+    });
 }
 
 function retryCoachRecording() {
@@ -214,14 +202,7 @@ function renderAttempts() {
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'clip gemini';
     if (waiting) { b.disabled = true; b.textContent = 'Coach…'; }
-    else if (canSpeak()) {
-      const text = coach.current.word || coach.current.text;
-      const on = playing?.clip.kind === 'browser' && playing.clip.key === key;
-      b.textContent = 'Play coach';
-      b.title = "Said by this browser's voice (the coach's recording could not be made)";
-      if (on) b.classList.add('playing');
-      b.addEventListener('click', () => (on ? stopPlayback() : speakWithBrowser(text, currentChoice()?.accent)));
-    } else { b.textContent = 'Coach: tap to load'; b.title = "The coach's recording could not be made; tap to try again"; b.addEventListener('click', retryCoachRecording); }
+    else { b.textContent = 'Coach: tap to load'; b.title = "The coach's recording could not be made; tap to try again"; b.addEventListener('click', retryCoachRecording); }
     box.append(b);
   }
   for (const clip of list) {
@@ -281,7 +262,7 @@ function talk() {
   const focus = (visitFocus[choice.accent] || []);
   coach = createCoachState({ accent: choice.accent, done, focus });
   const ownKey = progress.getOwnKey();
-  const loadSdk = testing && window.__fakeSdk ? async () => window.__fakeSdk : undefined;
+  const loadSdk = testSdk();
   conversation = startConversation({
     getPass: () => getPass({ ...choice, focus, done, ownKey, password: progress.getPassword() }),
     transcript,
