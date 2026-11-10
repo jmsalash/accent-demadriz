@@ -15,6 +15,11 @@ export const ACCENTS = Object.freeze([
     voiceNote: 'Speak the Dutch of the Netherlands with a clear, natural standard accent, like a newsreader on Dutch national television, with the harsh g and ch of the Randstad.' },
   { id: 'it-IT', label: 'Italian (Italy)', language: 'Italian',
     voiceNote: 'Speak standard Italian with a clear, natural accent, like a newsreader on Italian national television, with rolled r and clearly held double consonants.' },
+  { id: 'de-DE', label: 'German (Germany)', language: 'German',
+    voiceNote: 'Speak standard German (Hochdeutsch) with a clear, natural accent, like a newsreader on German national television, with the uvular r, clear ü and ö, and the ich and ach sounds.' },
+  { id: 'zh-CN', label: 'Chinese (Mandarin)', language: 'Mandarin Chinese',
+    voiceNote: 'Speak standard Mandarin Chinese (Putonghua) with a clear, natural accent, like a newsreader on Chinese national television, with accurate tones.',
+    coachNote: 'The learner sees each sentence in simplified characters, with spaces between the words and the pinyin above each word. Tones are part of the pronunciation: when a tone was wrong, say which tone you heard and which tone it should be. Call focus_word with the characters of one word, exactly as written between two spaces in the sentence.' },
 ]);
 
 export const NATIVE_LANGUAGES = Object.freeze([
@@ -336,6 +341,137 @@ const ITALIAN = [
   ]],
 ];
 
+const GERMAN = [
+  ['ch (ich, ach)', [
+    'Ich möchte noch ein bisschen Milch.',
+    'Acht Mädchen lachen laut in der Küche.',
+    'Das Buch liegt auf dem Dach, nicht im Fach.',
+    'Ich mache täglich Kuchen für mich und dich.',
+    'Die Nacht ist ruhig, und ich schlafe leicht.',
+  ]],
+  ['ü and u', [
+    'Die Mutter und die Mütter grüßen früh.',
+    'Fünf Schüler üben in der Schule.',
+    'Über der Tür hängt eine bunte Uhr.',
+    'Ich fühle mich müde und suche meinen Hut.',
+    'Die Brüder wünschen uns viel Glück.',
+  ]],
+  ['ö and o', [
+    'Ich höre schöne Töne im Hof.',
+    'Zwölf Löffel liegen schon auf dem Tisch.',
+    'Der König wohnt in einem großen Schloss.',
+    'Können wir den Ofen öffnen und das Brot holen?',
+    'Die Söhne mögen rote Rosen.',
+  ]],
+  ['German r', [
+    'Der rote Regenschirm gehört meinem Bruder.',
+    'Rita reist im Frühling nach Rom.',
+    'Wir fahren morgen früh mit dem Fahrrad.',
+    'Drei Freunde trinken frisches Wasser.',
+    'Herr Braun repariert die Tür im Büro.',
+  ]],
+  ['z and s', [
+    'Zehn Ziegen ziehen zum Zoo.',
+    'Die Sonne scheint sehr schön im Sommer.',
+    'Zwei Katzen sitzen auf dem Sofa.',
+    'Susanne zahlt sieben Euro für den Salat.',
+    'Die Zeitung liegt seit zwei Stunden im Zimmer.',
+  ]],
+  ['long and short vowels', [
+    'Der Staat liegt nicht in der Stadt.',
+    'Im Beet wachsen Blumen, im Bett schlafe ich.',
+    'Wir zahlen die Miete in der Mitte des Monats.',
+    'Der Ofen ist offen, und das Brot ist warm.',
+    'Ich fühle, wie die Kinder die Gläser füllen.',
+  ]],
+  ['ei, ie and eu', [
+    'Meine kleine Schwester liebt ihr Spielzeug.',
+    'Heute kaufen wir neue Schuhe für neun Euro.',
+    'Wir bleiben vier Tage in Wien.',
+    'Die Leute feiern heute im Freien.',
+    'Dieses Haus ist teuer, aber die Bäume sind schön.',
+  ]],
+  ['sch, sp and st', [
+    'Die Schüler spielen auf der Straße.',
+    'Stefan spricht spät am Abend mit der Schwester.',
+    'Ich stehe am Strand und sehe ein Schiff.',
+    'Der Sportler steht früh auf und springt ins Wasser.',
+    'Schnell, der Stuhl steht schon in der Stube!',
+  ]],
+];
+
+// Mandarin: each sentence is written with spaces between the words, followed by its pinyin, word for word.
+const CHINESE = [
+  ['the four tones', [
+    ['妈妈 骑 马， 马 慢， 妈妈 骂 马。', 'Māma qí mǎ, mǎ màn, māma mà mǎ.'],
+    ['他 今天 喝 汤， 不 吃 糖。', 'Tā jīntiān hē tāng, bù chī táng.'],
+    ['我 想 买 四 本 书。', 'Wǒ xiǎng mǎi sì běn shū.'],
+    ['老师 问 我们 一 个 问题。', 'Lǎoshī wèn wǒmen yī gè wèntí.'],
+    ['明天 天气 很 好， 我们 去 爬 山。', 'Míngtiān tiānqì hěn hǎo, wǒmen qù pá shān.'],
+  ]],
+  ['third tone and tone changes', [
+    ['你 好， 我 很 好。', 'Nǐ hǎo, wǒ hěn hǎo.'],
+    ['我 也 想 买 水果。', 'Wǒ yě xiǎng mǎi shuǐguǒ.'],
+    ['他 不 是 老师， 也 不 会 说 英语。', 'Tā bù shì lǎoshī, yě bù huì shuō Yīngyǔ.'],
+    ['我 有 一 个 弟弟 和 一 只 小 狗。', 'Wǒ yǒu yī gè dìdi hé yī zhī xiǎo gǒu.'],
+    ['请 你 给 我 五 杯 水。', 'Qǐng nǐ gěi wǒ wǔ bēi shuǐ.'],
+  ]],
+  ['zh, ch, sh and r', [
+    ['这 是 什么 茶？', 'Zhè shì shénme chá?'],
+    ['中国 人 喜欢 吃 热 的 菜。', 'Zhōngguó rén xǐhuan chī rè de cài.'],
+    ['老师 知道 这 本 书 很 长。', 'Lǎoshī zhīdào zhè běn shū hěn cháng.'],
+    ['今天 是 星期日， 商店 人 很 多。', 'Jīntiān shì xīngqīrì, shāngdiàn rén hěn duō.'],
+    ['我 每天 早上 出去 找 朋友。', 'Wǒ měitiān zǎoshang chūqù zhǎo péngyou.'],
+  ]],
+  ['j, q and x', [
+    ['请 进， 请 坐， 谢谢。', 'Qǐng jìn, qǐng zuò, xièxie.'],
+    ['今天 星期 几？', 'Jīntiān xīngqī jǐ?'],
+    ['小 姐姐 去 学校 学习。', 'Xiǎo jiějie qù xuéxiào xuéxí.'],
+    ['我 家 前面 有 七 家 新 商店。', 'Wǒ jiā qiánmiàn yǒu qī jiā xīn shāngdiàn.'],
+    ['北京 的 冬天 经常 下 雪。', 'Běijīng de dōngtiān jīngcháng xià xuě.'],
+  ]],
+  ['z, c and s', [
+    ['我 早上 在 家 做 早饭。', 'Wǒ zǎoshang zài jiā zuò zǎofàn.'],
+    ['这 次 我 才 吃 了 三 个 菜。', 'Zhè cì wǒ cái chī le sān gè cài.'],
+    ['四 十 四 个 字 很 容易 错。', 'Sì shí sì gè zì hěn róngyì cuò.'],
+    ['她 从 超市 送 来 蔬菜 和 草莓。', 'Tā cóng chāoshì sòng lái shūcài hé cǎoméi.'],
+    ['我 的 儿子 坐 在 草地 上 唱歌。', 'Wǒ de érzi zuò zài cǎodì shàng chànggē.'],
+  ]],
+  ['ü (yu, lü, nü)', [
+    ['我 女儿 去 旅行。', "Wǒ nǚ'ér qù lǚxíng."],
+    ['下 雨 了， 鱼 在 水 里 游。', 'Xià yǔ le, yú zài shuǐ lǐ yóu.'],
+    ['我 觉得 学 语言 很 有趣。', 'Wǒ juéde xué yǔyán hěn yǒuqù.'],
+    ['绿色 的 裙子 比 蓝色 的 贵。', 'Lǜsè de qúnzi bǐ lánsè de guì.'],
+    ['他 每 个 月 都 去 云南。', 'Tā měi gè yuè dōu qù Yúnnán.'],
+  ]],
+  ['-n and -ng endings', [
+    ['今天 晚上 很 冷。', 'Jīntiān wǎnshang hěn lěng.'],
+    ['他 的 朋友 姓 林， 不 姓 凌。', 'Tā de péngyou xìng Lín, bù xìng Líng.'],
+    ['请 问， 银行 在 公园 旁边 吗？', 'Qǐng wèn, yínháng zài gōngyuán pángbiān ma?'],
+    ['我 的 床 在 船 上。', 'Wǒ de chuáng zài chuán shàng.'],
+    ['北京 的 春天 风 很 大， 人 很 忙。', 'Běijīng de chūntiān fēng hěn dà, rén hěn máng.'],
+  ]],
+  ['b/p, d/t and g/k (puff of air)', [
+    ['爸爸 怕 胖， 不 吃 大 蛋糕。', 'Bàba pà pàng, bù chī dà dàngāo.'],
+    ['兔子 的 肚子 饱 了， 它 跑 了。', 'Tùzi de dùzi bǎo le, tā pǎo le.'],
+    ['哥哥 喝 咖啡， 看 国外 的 报纸。', 'Gēge hē kāfēi, kàn guówài de bàozhǐ.'],
+    ['这 条 裤子 太 短， 那 条 太 贵。', 'Zhè tiáo kùzi tài duǎn, nà tiáo tài guì.'],
+    ['朋友 帮 我 把 皮包 放 在 桌子 旁边。', 'Péngyou bāng wǒ bǎ píbāo fàng zài zhuōzi pángbiān.'],
+  ]],
+];
+const READING_ZH = [
+  ['你 好， 我 是 中国 人， 今天 天气 很 好。', 'Nǐ hǎo, wǒ shì Zhōngguó rén, jīntiān tiānqì hěn hǎo.'],
+  ['妈妈 骑 马 去 商店， 买 了 四 本 书 和 热 茶。', 'Māma qí mǎ qù shāngdiàn, mǎi le sì běn shū hé rè chá.'],
+  ['请 进， 请 坐， 谢谢 你 来 学校 学习。', 'Qǐng jìn, qǐng zuò, xièxie nǐ lái xuéxiào xuéxí.'],
+  ['我 早上 在 家 做 早饭， 这 次 吃 了 三 个 菜。', 'Wǒ zǎoshang zài jiā zuò zǎofàn, zhè cì chī le sān gè cài.'],
+  ['下 雨 了， 我 女儿 觉得 去 云南 旅行 很 有趣。', "Xià yǔ le, wǒ nǚ'ér juéde qù Yúnnán lǚxíng hěn yǒuqù."],
+  ['晚上 很 冷， 爸爸 的 朋友 在 公园 旁边 喝 咖啡， 看 报纸。', 'Wǎnshang hěn lěng, bàba de péngyou zài gōngyuán pángbiān hē kāfēi, kàn bàozhǐ.'],
+];
+
+// The pinyin of a Mandarin sentence or reading line, by its text ('' for every other language).
+const PINYIN = new Map([...CHINESE.flatMap(([, pairs]) => pairs), ...READING_ZH]);
+export const pinyinOf = (text) => PINYIN.get(text) || '';
+
 function build(id, groups) {
   const out = [];
   for (const [sound, texts] of groups) for (const text of texts) out.push({ id: `${id}-${String(out.length + 1).padStart(2, '0')}`, text, sound });
@@ -350,6 +486,8 @@ const LISTS = {
   'fr-FR': build('fr-FR', FRENCH),
   'nl-NL': build('nl-NL', DUTCH),
   'it-IT': build('it-IT', ITALIAN),
+  'de-DE': build('de-DE', GERMAN),
+  'zh-CN': build('zh-CN', CHINESE.map(([sound, pairs]) => [sound, pairs.map(([text]) => text)])),
 };
 
 // A short text to read aloud first, covering the important sounds of each accent, so the coach can hear which ones
@@ -398,6 +536,15 @@ READINGS['it-IT'] = [
   'Giorgio gioca in giardino e mangia un gelato con i funghi.',
   'La zia beve il tè sulla piazza, poi esce con la sciarpa e scende le scale.',
 ];
+READINGS['de-DE'] = [
+  'Ich möchte acht Bücher kaufen, aber nicht heute Nacht.',
+  'Die Mütter grüßen früh die fünf Schüler vor der Schule.',
+  'Der König hört schöne Töne und wohnt in einem großen Schloss.',
+  'Mein Bruder fährt morgen mit dem roten Fahrrad nach Rom.',
+  'Zehn Katzen sitzen seit zwei Stunden in der Sonne auf dem Sofa.',
+  'Die Leute in der Stadt spielen heute auf der Straße, und meine kleine Schwester bleibt vier Tage in Wien.',
+];
+READINGS['zh-CN'] = READING_ZH.map(([text]) => text);
 
 export const readingFor = (accentId) => { sentencesFor(accentId); return READINGS[accentId]; };
 

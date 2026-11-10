@@ -5,7 +5,7 @@
 const TOOLS = '(?:show_reading|set_focus|show_sentence|focus_word|sentence_done)';
 export const cleanText = (text) => String(text || '')
   .replace(new RegExp(`(?:\\bcall\\s*:?\\s*)?\\b${TOOLS}\\s*(?:\\{[^}]*\\}?|\\([^)]*\\)?)?`, 'gi'), '')
-  .replace(/[([]?\b(?:en|es)\s*[-/ ]\s*(?:gb|us|es|419)\s*[-/ ]\s*\d{1,2}\b[)\]]?\s*:?/gi, '')
+  .replace(/[([]?\b(?:en|es|fr|nl|it|de|zh)\s*[-/ ]\s*(?:gb|us|es|419|fr|nl|it|de|cn)\s*[-/ ]\s*\d{1,2}\b[)\]]?\s*:?/gi, '')
   .replace(/\s{2,}/g, ' ').replace(/\s+([.,!?;:])/g, '$1').trim();
 
 export function createTranscript(sink) {

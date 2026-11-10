@@ -7,7 +7,6 @@
 // onEnd(reason): user, mic, quota, busy, rate, daily, badkey, offline, limit, dropped.
 import { Player, rms, downsampleTo16k } from './audio.js';
 import { startLive as realStartLive } from './live.js';
-import { soundsLike } from './shared/similar.js';
 
 
 const MIC = { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 };
@@ -74,7 +73,9 @@ export function startConversation({ getPass, transcript, coach, clips, onState, 
   };
   // The reading test: once most of the text has been heard, the coach must give its verdict and move on to sentences.
   // If its answer ends without doing that, it is reminded once.
-  const words = (t) => String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').match(/\p{L}+/gu) || [];
+  // Chinese is compared character by character: the recogniser writes it without spaces.
+  const words = (t) => (String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').match(/\p{L}+/gu) || [])
+    .flatMap((w) => (/\p{Script=Han}/u.test(w) ? [...w] : [w]));
   const checkReading = () => {
     const cur = coach.current;
     if (!cur?.reading) { c.readHeard = ''; c.nudged = false; return false; }
@@ -87,32 +88,20 @@ export function startConversation({ getPass, transcript, coach, clips, onState, 
     c.live.say('[Note from the website: the learner has finished reading the text. If you have not given your feedback yet, give it now, once. Then call set_focus with the sounds that need the most work and show_sentence, and ask them to read it. Do not repeat feedback you already gave.]');
     return true;
   };
-  // Only a clearly different word counts (like "window" for "through"): an accent error the recogniser wrote
-  // differently ("true" for "through", "terror" for "there") is the coach's to judge, once.
-  const clearlyDifferent = (heard, word) => {
-    const w = words(word).join('');
-    const said = words(heard);
-    if (!w || !said.length) return false;
-    return said.every((t) => soundsLike(t, w) < 0.4);
-  };
-  // The speech recogniser's text of the try: when it does not contain the word being drilled, the coach is told, so a
-  // different word is not taken for a good try.
-  const checkWord = () => {
-    if (c.checked) return false;
+  // The speech recogniser's text of the try is kept with its recording. The website does not make the coach answer a
+  // try a second time because of it: the coach gets that text with its own tool call, and is only corrected (below)
+  // when it praised a try that was heard as another word.
+  const noteHeardOnClip = () => {
+    if (c.checked) return;
     c.checked = true;
-    const word = coach.current?.word;
     const heard = c.youText.trim();
     if (c.lastClip && heard) c.lastClip.heard = heard;
-    if (!word || c.triedKey !== coach.key || !heard) return false;
-    if (!clearlyDifferent(heard, word)) return false;
-    c.live.say(`[Note from the website: the speech recogniser heard "${heard.slice(0, 80)}", a different word from "${word}". If you have not already said so, tell the learner briefly that it was not "${word}" and ask them to say "${word}". Do not repeat any other feedback.]`);
-    return true;
   };
 
   // The coach saying it moves on ("let's move on to the next word") without calling the tool leaves the old word on
   // screen and the learner stuck. The website keeps track of each answer: what the coach said, whether it moved the
   // screen, and whether it finished a sentence without showing the next one. If it did not move, it is told once.
-  const MOVING = /\b(let'?s move on|let us move on|moving on|move on to|on to the next|the next (word|sentence))|\b(pasemos|pasamos a|vamos (a|con) la siguiente|siguiente (palabra|frase|oraci))|\b(passons|on passe|mot suivant|phrase suivante)|\b(volgende (woord|zin)|we gaan verder|laten we doorgaan)|\b(passiamo|prossima (parola|frase)|andiamo avanti)/i;
+  const MOVING = /\b(let'?s move on|let us move on|moving on|move on to|on to the next|the next (word|sentence))|\b(pasemos|pasamos a|vamos (a|con) la siguiente|siguiente (palabra|frase|oraci))|\b(passons|on passe|mot suivant|phrase suivante)|\b(volgende (woord|zin)|we gaan verder|laten we doorgaan)|\b(passiamo|prossima (parola|frase)|andiamo avanti)|\b(nächste[sn]? (wort|satz)|machen wir weiter|gehen wir weiter|weiter zum)|下一个|下一個|下一句|我们继续/i;
   // Gemini often says "let's move on" in one message and calls the tool in the next, so the website first waits a
   // moment (after the coach's voice has finished) and only reminds it if the screen still has not changed.
   const checkMove = () => {
@@ -139,15 +128,14 @@ export function startConversation({ getPass, transcript, coach, clips, onState, 
   const remindMove = (finished) => {
     const cur = coach.current;
     c.moveNudged = coach.key;
-    c.live.say(finished
-      ? '[Note from the website: you marked the sentence as done, but the next one is not on screen yet. Call show_sentence with the next sentence now and ask the learner to read it.]'
-      : `[Note from the website: you said you are moving on, but the screen still shows "${cur.word || cur.text}". Do it now: call focus_word with the next word that needs work, or sentence_done and show_sentence. Do not repeat your feedback.]`);
+    c.live.say(`[Note from the website: you said you are moving on, but the screen still shows "${cur.word || cur.text}". Do it now: call focus_word with the next word that needs work, or sentence_done (the next sentence then shows by itself). Do not repeat your feedback.]`);
   };
 
   // The coach praising a try that the speech recogniser wrote as another word ("tree" for "three"): it is told, once
   // per try, so it corrects itself instead of letting a wrong sound pass.
-  const PRAISE = /\b(right|correct|well done|good|great|perfect|excellent|nice|exactly|bien|correcto|perfecto|muy bien|bravo|parfait|très bien|goed|prima|uitstekend|giusto|esatto|perfetto|bene)\b/i;
-  const DOUBT = /\b(not|no|isn'?t|wasn'?t|still|almost|closer|nearly|quite|todavía|casi|pas|encore|presque|niet|nog|bijna|non|ancora|quasi)\b/i;
+  const PRAISE = /\b(right|correct|well done|good|great|perfect|excellent|nice|exactly|bien|correcto|perfecto|muy bien|bravo|parfait|très bien|goed|prima|uitstekend|giusto|esatto|perfetto|bene|richtig|gut|genau|perfekt|super)\b|很好|非常好|太好了|对了|正确|不错/i;
+  // Words that show the coach did not take the try for right: "your th was good, but I didn't hear the ending".
+  const DOUBT = /\b(not|no|isn'?t|wasn'?t|didn'?t|but|again|missing|instead|rather|still|almost|closer|nearly|quite|todavía|casi|pero|otra vez|pas|encore|presque|mais|niet|nog|bijna|maar|opnieuw|non|ancora|quasi|ma|di nuovo|nicht|noch|fast|aber|nochmal|wieder)\b|不|还|再|但/i;
   // The coach speaking a tool call aloud instead of calling it: it is told once per turn.
   const SPOKEN_TOOL = /\b(show_reading|set_focus|show_sentence|focus_word|sentence_done)\b/i;
   const checkSpokenTool = () => {
@@ -215,12 +203,13 @@ export function startConversation({ getPass, transcript, coach, clips, onState, 
     if (!c.answering) { c.answering = true; keepTry(); }
     stopWaitingForMove();
     const answers = calls.map((call) => {
-      const { response, change } = coach.handle(call);
+      const { response, change, shown } = coach.handle(call, { spoke: Boolean(c.turnSpoke) });
       if (change === 'done') onDone(call.args.id);
       if (change === 'focus') onFocus(coach.focus);
       if (change) onScreen(change);
       if (change === 'word' || change === 'sentence') c.turnMoved = true;
-      if (change === 'done') c.turnFinished = true;
+      // A finished sentence brings the next one on screen in the same step.
+      if (change === 'done') { c.turnMoved = true; if (shown) onScreen('sentence'); }
       return { id: call.id, name: call.name, response };
     });
     c.live.respond(answers);
@@ -243,6 +232,7 @@ export function startConversation({ getPass, transcript, coach, clips, onState, 
       case 'audio':
         if (!c.answering) { c.answering = true; keepTry(); }
         stopWaitingForMove();
+        c.turnSpoke = true;
         if (c.paused) { c.queued.push(m.data); break; }
         player.play(m.data);
         if (c.introDone && c.state !== 'speaking') setState('speaking');
@@ -263,20 +253,19 @@ export function startConversation({ getPass, transcript, coach, clips, onState, 
         player.stop();
         c.queued = [];
         c.answering = false;
+        c.turnSpoke = false;
         if (c.introDone && !c.paused) setState('listening');
         break;
       case 'turnDone':
         transcript.turnDone();
         c.answering = false;
-        // A different word than the one drilled: the coach answers again before the learner's turn.
+        c.turnSpoke = false;
         // A move the coach announced but has not made yet is waited for in the background: the learner's turn
         // starts straight away all the same.
         if (checkSpokenTool()) { c.turnSaid = ''; c.turnMoved = false; c.turnFinished = false; c.youText = ''; break; }
         if (checkPraise()) { c.turnSaid = ''; c.turnMoved = false; c.turnFinished = false; c.youText = ''; break; }
-        if (!(c.introDone && checkMove())) {
-          if (c.tried && checkWord()) { c.youText = ''; break; }
-          if (checkReading()) { c.youText = ''; break; }
-        }
+        if (c.tried) noteHeardOnClip();
+        if (!(c.introDone && checkMove()) && checkReading()) { c.youText = ''; break; }
         c.youText = '';
         afterDrain(() => {
           c.introDone = true; c.you = []; c.youVoice = false; c.tried = false;

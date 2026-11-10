@@ -1,6 +1,6 @@
 // The page: the password screen, the start screen (choose languages) and the practice screen (the eye, the reading test or sentence, the
 // recordings to play, an optional Next, the transcript, Settings).
-import { ACCENTS, NATIVE_LANGUAGES, accentById, sentencesFor, readingFor } from './shared/sentences.js';
+import { ACCENTS, NATIVE_LANGUAGES, accentById, sentencesFor, readingFor, pinyinOf } from './shared/sentences.js';
 import { practiceOrder } from './shared/coach.js';
 import { createProgress } from './progress.js';
 import { getPass, getSpeech, getWordPass, checkPassword, releasePass, checkIn } from './pass.js';
@@ -101,15 +101,27 @@ function renderSentence(text, word, lines = false) {
 function highlight(el, text, word) {
   const want = word ? letters(word) : '';
   let marked = false;
+  // Mandarin: the pinyin of each word sits above its characters.
+  const pinyin = pinyinOf(text).split(/\s+/).filter(Boolean);
+  let n = 0;
+  const into = (token) => {
+    if (!pinyin.length || !token.trim()) return el;
+    const ruby = document.createElement('ruby');
+    el.append(ruby);
+    return ruby;
+  };
+  const above = (to) => { if (to === el) return; const rt = document.createElement('rt'); rt.textContent = pinyin[n++] || ''; to.append(rt); };
   for (const token of text.split(/(\s+)/)) {
-    if (!want || marked || !token.trim() || !letters(token).includes(want)) { el.append(token); continue; }
+    const to = into(token);
+    if (!want || marked || !token.trim() || !letters(token).includes(want)) { to.append(token); above(to); continue; }
     marked = true;
     const at = token.toLowerCase().indexOf(want);
     const start = at >= 0 ? at : 0;
     const end = at >= 0 ? at + want.length : token.length;
     const mark = document.createElement('mark');
     mark.textContent = token.slice(start, end);
-    el.append(token.slice(0, start), mark, token.slice(end));
+    to.append(token.slice(0, start), mark, token.slice(end));
+    above(to);
   }
 }
 
@@ -142,7 +154,7 @@ function renderPractice() {
   if (!allDone && !waiting) {
     $('sentence-card').classList.toggle('reading', reading);
     if (reading) {
-      $('sentence').replaceChildren(...readingFor(choice.accent).map((line) => { const p = document.createElement('span'); p.className = 'line-of-text'; p.textContent = line; return p; }));
+      renderSentence(readingFor(choice.accent).join('\n'), '', true);
       if (shown?.word) renderSentence(shown.text, shown.word, true);
       $('sound').textContent = 'The coach listens to every sound, then picks the ones to practise.';
     } else {
