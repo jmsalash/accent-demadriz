@@ -323,7 +323,7 @@ function startOver() {
   failed.clear();
   for (const k of Object.keys(visitFocus)) delete visitFocus[k];
   transcript.clear();
-  $('native').value = ''; $('accent').value = '';
+  $('native').value = ''; $('accent').value = ''; $('feedback-native').checked = false;
   $('begin').disabled = true;
   if ($('settings').open) $('settings').close();
   showScreen('start');
@@ -343,7 +343,7 @@ function init() {
   $('start-form').addEventListener('submit', (e) => {
     e.preventDefault();
     if (!$('native').value || !$('accent').value) return;
-    progress.setChoice({ native: $('native').value, accent: $('accent').value });
+    progress.setChoice({ native: $('native').value, accent: $('accent').value, feedbackNative: $('feedback-native').checked });
     progress.setOwnKey($('key').value);
     showKey();
     coach = null;
@@ -357,7 +357,7 @@ function init() {
   const openSettings = () => {
     hideMessage(); showKey();
     const c = currentChoice();
-    if (c) { $('s-native').value = c.native; $('s-accent').value = c.accent; }
+    if (c) { $('s-native').value = c.native; $('s-accent').value = c.accent; $('s-feedback-native').checked = Boolean(c.feedbackNative); }
     $('s-key').value = ''; $('settings-msg').textContent = '';
     dialog.showModal();
   };
@@ -368,7 +368,7 @@ function init() {
   $('settings-lang-form').addEventListener('submit', (e) => {
     e.preventDefault();
     stopTalking('user');
-    progress.setChoice({ native: $('s-native').value, accent: $('s-accent').value });
+    progress.setChoice({ native: $('s-native').value, accent: $('s-accent').value, feedbackNative: $('s-feedback-native').checked });
     coach = null;
     transcript.clear();
     renderPractice();

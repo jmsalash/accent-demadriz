@@ -22,12 +22,12 @@ export async function checkPassword({ password, base = SERVICE_URL, fetchImpl = 
   }
 }
 
-export async function getPass({ native, accent, focus = [], done = [], ownKey = '', password = '', base = SERVICE_URL, fetchImpl = (...a) => fetch(...a) }) {
+export async function getPass({ native, accent, feedbackNative = false, focus = [], done = [], ownKey = '', password = '', base = SERVICE_URL, fetchImpl = (...a) => fetch(...a) }) {
   if (ownKey) {
     try {
       const minutes = OWN_KEY_MINUTES;
       const { token, model } = await mintToken({
-        apiKey: ownKey, instructions: buildCoachInstructions({ native, accent, focus, done }), tools: COACH_TOOLS, sessionMinutes: minutes, fetchImpl,
+        apiKey: ownKey, instructions: buildCoachInstructions({ native, accent, focus, done, feedbackNative }), tools: COACH_TOOLS, sessionMinutes: minutes, fetchImpl,
       });
       return { token, model, minutes };
     } catch (e) {
@@ -36,7 +36,7 @@ export async function getPass({ native, accent, focus = [], done = [], ownKey = 
   }
   try {
     const res = await fetchImpl(`${base}/token`, {
-      method: 'POST', headers: headers(password), body: JSON.stringify({ native, accent, focus, done }),
+      method: 'POST', headers: headers(password), body: JSON.stringify({ native, accent, focus, done, ...(feedbackNative ? { feedbackNative: true } : {}) }),
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.token) return { token: data.token, model: data.model, minutes: data.minutes || 10, ...(data.passId ? { passId: data.passId } : {}) };

@@ -49,12 +49,14 @@ export function createCoachState({ accent, done = [], focus = [] }) {
   const misheard = (args) => args.previous_right === true && current?.word && heardOther;
   const held = (args) => misheard(args) || (current?.word && tries > 0 && tries < MAX_TRIES && !skipped && args.previous_right !== true);
   const holdReason = (args = {}) => (misheard(args)
-    ? `(For you only, never read this aloud.) The speech recogniser heard "${heardOther}", not "${current.word}": that try was not right. Do not say it was right. ${heardHint(heardOther, current.word)} If you already gave your feedback on that try, do not give it again: only say "Say '${current.word}' again."`
-    : `(For you only, never read this aloud.) The learner has not said "${current.word}" right yet (try ${tries} of ${MAX_TRIES}): stay on it, and do not say you are moving on. If you already gave your feedback on that try, do not give it again: only say "Say '${current.word}' again." and wait. If you have not, give it once.${heardOther ? ` ${heardHint(heardOther, current.word)}` : ''} Move on only after a right try (then pass previous_right: true) or after ${MAX_TRIES} tries.`);
+    ? `(For you only, never read this aloud.) The speech recogniser heard "${heardOther}", not "${current.word}": that try was not right. Do not say it was right. ${heardHint(heardOther, current.word)} If you already gave your feedback on that try, do not give it again: only ask them, in the language you speak with the learner, to say "${current.word}" again.`
+    : `(For you only, never read this aloud.) The learner has not said "${current.word}" right yet (try ${tries} of ${MAX_TRIES}): stay on it, and do not say you are moving on. If you already gave your feedback on that try, do not give it again: only ask them, in a few words and in the language you speak with the learner, to say "${current.word}" again, and wait. If you have not, give it once.${heardOther ? ` ${heardHint(heardOther, current.word)}` : ''} Move on only after a right try (then pass previous_right: true) or after ${MAX_TRIES} tries.`);
   return {
     // spoke: the coach had already spoken in this turn before calling the tool.
     handle({ name, args = {} }, { spoke = false } = {}) {
       if (name === 'show_reading') {
+        // The reading test is taken once per visit: asked for again, it would replace the sentence being practised.
+        if (readingHeard) return no(`The learner already did the reading test (their sounds: ${focusSounds.join(', ')}). Do not show it again and say nothing about it: carry on with the practice sentences.`);
         current = { id: 'reading', text: readingFor(accent).join('\n'), word: null, reading: true };
         readingSpoken = false;
         moved();

@@ -37,7 +37,9 @@ export function practiceOrder(accent, { focus = [], done = [] } = {}) {
   return [...left.filter((s) => focus.includes(s.sound)), ...left.filter((s) => !focus.includes(s.sound))];
 }
 
-export function buildCoachInstructions({ native, accent, focus = [], done = [] }) {
+// feedbackNative: the coach explains everything in the learner's own language; only the practised words are in the
+// language being practised.
+export function buildCoachInstructions({ native, accent, focus = [], done = [], feedbackNative = false }) {
   const a = accentById(accent);
   if (!a || !NATIVE_LANGUAGES.includes(native)) throw new Error('unknown choice');
   const p = cleanProgress(accent, { focus, done });
@@ -48,11 +50,15 @@ export function buildCoachInstructions({ native, accent, focus = [], done = [] }
   const start = p.focus.length
     ? `The learner already did the reading test. The sounds they need most are: ${p.focus.join(', ')}. Greet them in one short sentence, remind them of these sounds, then call show_sentence with the first sentence of the list below and ask them to read it.`
     : `Start with the reading test. Your first turn has exactly two steps: call show_reading (and no other tool), then say once, in one short greeting, that they should read the whole text aloud at their normal speed. Then stop and wait. Do not call set_focus or show_sentence, and give no feedback, until the learner has actually read the text. Listen carefully to every sound. Reading it takes a while: if they pause between lines, stay silent and let them carry on; only answer once they have finished the last line. When they have read it (not before), call set_focus with the one to three sounds that need the most attention (exact names from this list: ${soundsFor(accent).join('; ')}). Then tell them honestly, in two or three sentences, which sounds need the most work, naming exactly the sounds you saved, with one example word from their reading for each. Then call show_sentence with the first sentence the website suggests (next_sentences) and ask them to read it. Never ask them to read the text again: the reading is only a test, and practice happens with the sentences. Practise only those sounds until the website lets you move to others.`;
+  const notes = 'Website notes and tool answers are written in English, and may quote English phrases: that is never a reason to change language. Put what they ask into the language you speak with the learner.';
+  const language = feedbackNative
+    ? `Language: the learner asked for the explanations in their own language. Speak ${native} for everything you say to them, from your first word to your last: the greeting, the instructions, the feedback and the tips. Only the words and sounds being practised are said in ${a.language}, with the ${a.label} pronunciation. Never explain in ${a.language}${[native, a.language].some((l) => l.startsWith('English')) ? '' : ' or in English'}, and never switch language during the session. ${notes}`
+    : `Language: always speak ${a.language} with simple words, from your first word to your last. Never switch to another language during the session${a.language === 'English' ? '' : ', and never to English'}: only when the learner is clearly stuck may you add one short explanation in ${native}, and then go back to ${a.language}. ${notes}`;
   return `You are an honest, precise accent coach on a practice website. The learner's native language is ${native}. They want to improve their ${a.label} accent.
 
 Voice: ${a.voiceNote} Always model the ${a.label} pronunciation.${a.coachNote ? `\n\n${a.coachNote}` : ''}
 
-Language: speak ${a.language} with simple words. Only when the learner is clearly stuck, you may add one short explanation in ${native}.
+${language}
 
 Reading test:
 ${reading}

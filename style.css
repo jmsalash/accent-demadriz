@@ -65,6 +65,8 @@ h1 { font-size: clamp(1.7rem, 5vw, 2.3rem); font-weight: 650; letter-spacing: -.
   width: 100%; padding: 13px 14px; border-radius: 12px; border: 1px solid #2e2d38; background: var(--card); color: var(--ink); font: inherit;
 }
 .field:focus { outline: none; border-color: var(--eye); }
+.form label.check { display: flex; align-items: flex-start; gap: 10px; font-weight: 500; margin: 2px 0; cursor: pointer; }
+.check input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--eye); flex: none; }
 .key-box { margin-top: 8px; }
 .key-box label, .settings h3 { display: block; font-weight: 600; margin: 0 0 6px; font-size: 1rem; }
 em { font-style: normal; color: var(--soft); font-weight: 400; }

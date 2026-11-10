@@ -11,7 +11,8 @@ export function createProgress(storage = globalThis.localStorage) {
   const done = new Map(); // accent -> [sentence ids]
   return {
     getChoice() { return choice ? { ...choice } : null; },
-    setChoice({ native, accent }) { choice = native && accent ? { native, accent } : null; },
+    // feedbackNative: the coach explains in the learner's own language instead of the one being practised.
+    setChoice({ native, accent, feedbackNative = false }) { choice = native && accent ? { native, accent, ...(feedbackNative ? { feedbackNative: true } : {}) } : null; },
     getDone(accent) { return [...(done.get(accent) || [])]; },
     markDone(accent, id) { const d = done.get(accent) || []; if (!d.includes(id)) done.set(accent, [...d, id]); },
     // Back to the start screen, with every accent's progress forgotten. The own key and the password stay.
