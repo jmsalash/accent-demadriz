@@ -67,8 +67,15 @@ h1 { font-size: clamp(1.7rem, 5vw, 2.3rem); font-weight: 650; letter-spacing: -.
 .field:focus { outline: none; border-color: var(--eye); }
 .form label.check { display: flex; align-items: flex-start; gap: 10px; font-weight: 500; margin: 2px 0; cursor: pointer; }
 .check input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--eye); flex: none; }
-.key-box { margin-top: 8px; }
-.key-box label, .settings h3 { display: block; font-weight: 600; margin: 0 0 6px; font-size: 1rem; }
+.key-box { margin-top: 12px; }
+/* The label sits clear above its box (the form's own label spacing would pull the box over it). */
+.form .key-box label, .settings h3 { display: block; font-weight: 600; margin: 0 0 8px; font-size: 1rem; }
+/* Closed until asked for: most visitors never need their own key. */
+.advanced { border: 1px solid var(--line); border-radius: 12px; padding: 0 14px; }
+.advanced summary { cursor: pointer; padding: 12px 0; font-weight: 600; color: var(--soft); list-style-position: inside; }
+.advanced summary:hover, .advanced[open] summary { color: var(--ink); }
+.advanced[open] { padding-bottom: 14px; }
+.advanced .key-box { margin-top: 2px; }
 em { font-style: normal; color: var(--soft); font-weight: 400; }
 .help { color: var(--soft); font-size: .84rem; margin: 8px 2px 0; }
 button { font: inherit; cursor: pointer; }

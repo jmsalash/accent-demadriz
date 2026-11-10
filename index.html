@@ -40,11 +40,14 @@
       <label for="accent">I want to practise</label>
       <select id="accent" class="field" required><option value="">Choose an accent</option></select>
       <label class="check" for="feedback-native"><input id="feedback-native" type="checkbox"> <span>Give feedback in my native language <em>(otherwise the coach speaks only the language you practise)</em></span></label>
-      <div class="key-box">
-        <label for="key">Your own Gemini key <em>(optional)</em></label>
-        <input id="key" class="field" type="password" autocomplete="off" spellcheck="false" placeholder="Leave empty to use the free key">
-        <p class="help">No key? This site's free key is used. To get your own free one, <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">create a Gemini key</a>: sign in with a Google account, press "Create API key", copy it and paste it here. It stays in this browser.</p>
-      </div>
+      <details class="advanced" id="advanced">
+        <summary>Advanced <em>(use your own Gemini key)</em></summary>
+        <div class="key-box">
+          <label for="key">Your own Gemini key <em>(optional)</em></label>
+          <input id="key" class="field" type="password" autocomplete="off" spellcheck="false" placeholder="Leave empty to use the free key">
+          <p class="help">No key? This site's free key is used. To get your own free one, <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">create a Gemini key</a>: sign in with a Google account, press "Create API key", copy it and paste it here. It stays in this browser.</p>
+        </div>
+      </details>
       <button id="begin" class="primary" type="submit" disabled>Start</button>
     </form>
     <p class="disclaimer">This site runs on a free Gemini key, so it may be busy (about three conversations at once) or used up for the day. Your voice is sent only to Google Gemini, to power the coach; on a free key Google may use it to improve its products. Recordings stay in this browser tab and are gone when you close it.</p>

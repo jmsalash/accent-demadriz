@@ -312,6 +312,7 @@ function showKey() {
   $('settings-key').textContent = k ? `Using your own key (…${k.slice(-4)}).` : "Using this site's free key.";
   $('forget-key').hidden = !k;
   $('key').value = k;
+  if (k) $('advanced').open = true; // a key in use is never hidden
 }
 
 function startOver() {
@@ -324,6 +325,7 @@ function startOver() {
   for (const k of Object.keys(visitFocus)) delete visitFocus[k];
   transcript.clear();
   $('native').value = ''; $('accent').value = ''; $('feedback-native').checked = false;
+  $('advanced').open = Boolean(progress.getOwnKey());
   $('begin').disabled = true;
   if ($('settings').open) $('settings').close();
   showScreen('start');
