@@ -1,5 +1,5 @@
 // What Gemini is told to do as an accent coach, and the tools it uses to drive the screen.
-import { NATIVE_LANGUAGES, accentById, sentencesFor, soundsFor, readingFor } from './sentences.js';
+import { isNativeLanguage, nativeKind, accentById, sentencesFor, soundsFor, readingFor } from './sentences.js';
 
 const str = (description) => ({ type: 'STRING', description });
 const RIGHT = { type: 'BOOLEAN', description: 'true only when the learner\'s last try at the word being practised was right. While a try is still wrong, the website keeps the learner on that word (up to 5 tries).' };
@@ -7,7 +7,7 @@ const RIGHT = { type: 'BOOLEAN', description: 'true only when the learner\'s las
 export const COACH_TOOLS = Object.freeze([
   { name: 'show_reading', description: 'Show the reading test (a short text of several lines) on the learner\'s screen. Call it before asking them to read it.',
     parameters: { type: 'OBJECT', properties: {} } },
-  { name: 'set_focus', description: 'Save the sounds the learner needs to work on most, after hearing the reading test. Use the exact sound names from your list.',
+  { name: 'set_focus', description: 'Save the sounds the learner needs to work on most, after hearing the reading test. Use the exact sound names from your list. The website then shows the first practice sentence by itself and tells you which one.',
     parameters: { type: 'OBJECT', properties: { sounds: { type: 'ARRAY', items: { type: 'STRING' }, description: 'One to three sound names, most important first.' } }, required: ['sounds'] } },
   { name: 'show_sentence', description: 'Show a practice sentence on the learner\'s screen: the first one of the visit. After that, sentence_done shows the next one by itself.',
     parameters: { type: 'OBJECT', properties: { id: str('The sentence id, for example en-GB-01.'), previous_right: RIGHT }, required: ['id'] } },
@@ -19,7 +19,7 @@ export const COACH_TOOLS = Object.freeze([
 
 export const MAX_FOCUS = 3;
 
-export const validChoice = ({ native, accent } = {}) => NATIVE_LANGUAGES.includes(native) && Boolean(accentById(accent));
+export const validChoice = ({ native, accent } = {}) => isNativeLanguage(native) && Boolean(accentById(accent));
 
 // Keeps only real sound names and sentence ids for this accent.
 export function cleanProgress(accent, { focus = [], done = [] } = {}) {
@@ -41,7 +41,7 @@ export function practiceOrder(accent, { focus = [], done = [] } = {}) {
 // language being practised.
 export function buildCoachInstructions({ native, accent, focus = [], done = [], feedbackNative = false }) {
   const a = accentById(accent);
-  if (!a || !NATIVE_LANGUAGES.includes(native)) throw new Error('unknown choice');
+  if (!a || !isNativeLanguage(native)) throw new Error('unknown choice');
   const p = cleanProgress(accent, { focus, done });
   let order = practiceOrder(accent, p);
   if (!order.length) order = practiceOrder(accent, { focus: p.focus, done: [] });
@@ -49,11 +49,13 @@ export function buildCoachInstructions({ native, accent, focus = [], done = [], 
   const reading = readingFor(accent).join('\n');
   const start = p.focus.length
     ? `The learner already did the reading test. The sounds they need most are: ${p.focus.join(', ')}. Greet them in one short sentence, remind them of these sounds, then call show_sentence with the first sentence of the list below and ask them to read it.`
-    : `Start with the reading test. Your first turn has exactly two steps: call show_reading (and no other tool), then say once, in one short greeting, that they should read the whole text aloud at their normal speed. Then stop and wait. Do not call set_focus or show_sentence, and give no feedback, until the learner has actually read the text. Listen carefully to every sound. Reading it takes a while: if they pause between lines, stay silent and let them carry on; only answer once they have finished the last line. When they have read it (not before), call set_focus with the one to three sounds that need the most attention (exact names from this list: ${soundsFor(accent).join('; ')}). Then tell them honestly, in two or three sentences, which sounds need the most work, naming exactly the sounds you saved, with one example word from their reading for each. Then call show_sentence with the first sentence the website suggests (next_sentences) and ask them to read it. Never ask them to read the text again: the reading is only a test, and practice happens with the sentences. Practise only those sounds until the website lets you move to others.`;
+    : `Start with the reading test. Your first turn has exactly two steps: call show_reading (and no other tool), then say once, in one short greeting, that they should read the whole text aloud at their normal speed. Then stop and wait. Do not call set_focus or show_sentence, and give no feedback, until the learner has actually read the text. Listen carefully to every sound. Reading it takes a while: if they pause between lines, stay silent and let them carry on; only answer once they have finished the last line. When they have read it (not before), call set_focus with the one to three sounds that need the most attention (exact names from this list: ${soundsFor(accent).join('; ')}). The website then puts the first practice sentence on the learner's screen by itself, in place of the reading text, and tells you which one it is: do not call show_sentence for it. Then tell them honestly, in two or three sentences, which sounds need the most work, naming exactly the sounds you saved, with one example word from their reading for each, and ask them to read the sentence that is now on screen. Never ask them to read the text again: the reading is only a test, and practice happens with the sentences. Practise only those sounds until the website lets you move to others.`;
   const notes = 'Website notes and tool answers are written in English, and may quote English phrases: that is never a reason to change language. Put what they ask into the language you speak with the learner.';
-  const language = feedbackNative
+  // The regional kind of the learner's own language (Spain or Latin America, British or American) is kept to strictly.
+  const kind = nativeKind(native) ? ` Whenever you speak the learner's own language, it is strictly ${nativeKind(native)}.` : '';
+  const language = (feedbackNative
     ? `Language: the learner asked for the explanations in their own language. Speak ${native} for everything you say to them, from your first word to your last: the greeting, the instructions, the feedback and the tips. Only the words and sounds being practised are said in ${a.language}, with the ${a.label} pronunciation. Never explain in ${a.language}${[native, a.language].some((l) => l.startsWith('English')) ? '' : ' or in English'}, and never switch language during the session. ${notes}`
-    : `Language: always speak ${a.language} with simple words, from your first word to your last. Never switch to another language during the session${a.language === 'English' ? '' : ', and never to English'}: only when the learner is clearly stuck may you add one short explanation in ${native}, and then go back to ${a.language}. ${notes}`;
+    : `Language: always speak ${a.language} with simple words, from your first word to your last. Never switch to another language during the session${a.language === 'English' ? '' : ', and never to English'}: only when the learner is clearly stuck may you add one short explanation in ${native}, and then go back to ${a.language}. ${notes}`) + kind;
   return `You are an honest, precise accent coach on a practice website. The learner's native language is ${native}. They want to improve their ${a.label} accent.
 
 Voice: ${a.voiceNote} Always model the ${a.label} pronunciation.${a.coachNote ? `\n\n${a.coachNote}` : ''}

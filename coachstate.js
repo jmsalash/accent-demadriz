@@ -55,6 +55,8 @@ export function createCoachState({ accent, done = [], focus = [] }) {
     // spoke: the coach had already spoken in this turn before calling the tool.
     handle({ name, args = {} }, { spoke = false } = {}) {
       if (name === 'show_reading') {
+        // Already on screen: asking again must not forget that the learner has started reading.
+        if (current?.reading) return { response: { ok: true, next: 'The text is already on screen. Say nothing more: wait for the learner to read it.' }, change: null };
         // The reading test is taken once per visit: asked for again, it would replace the sentence being practised.
         if (readingHeard) return no(`The learner already did the reading test (their sounds: ${focusSounds.join(', ')}). Do not show it again and say nothing about it: carry on with the practice sentences.`);
         current = { id: 'reading', text: readingFor(accent).join('\n'), word: null, reading: true };
@@ -70,7 +72,16 @@ export function createCoachState({ accent, done = [], focus = [] }) {
         if (!ok.length) return no(`use one to three of these sound names exactly: ${sounds.join('; ')}`);
         focusSounds = ok;
         readingHeard = true;
-        return { response: { ok: true, saved: ok, next_sentences: upNext().slice(0, 5).map((s) => s.id) }, change: 'focus' };
+        // The first practice sentence goes on screen with the same call, so it is there when the coach asks for it.
+        const first = upNext()[0];
+        const next_sentences = upNext().slice(0, 5).map((s) => s.id);
+        if (!first) return { response: { ok: true, saved: ok, next_sentences }, change: 'focus' };
+        moved(); sentenceRead = false;
+        current = { id: first.id, text: first.text, word: null, sound: first.sound };
+        return {
+          response: { ok: true, saved: ok, next_sentences, now_on_screen: { id: first.id, text: first.text, sound: first.sound }, next: 'The first practice sentence is already on the learner\'s screen, in place of the reading text: do not call show_sentence. Tell them which sounds need the most work, ask them to read the sentence on screen, then wait until they have read it.' },
+          change: 'focus', shown: true,
+        };
       }
       if (name === 'show_sentence') {
         const s = list.find((x) => x.id === args.id);
@@ -88,6 +99,8 @@ export function createCoachState({ accent, done = [], focus = [] }) {
       }
       if (name === 'focus_word') {
         if (!current) return no('call show_sentence first');
+        // Words are practised in the practice sentences, never in the reading text.
+        if (current.reading) return no(`(For you only, never read this aloud.) The reading text is on screen, not a practice sentence. ${hasRead() ? 'Call set_focus with the sounds that need the most work: the first practice sentence then shows by itself.' : readFirst()}`);
         // A word is only picked after hearing the learner read the sentence: otherwise the coach judges a reading that
         // never happened, and the learner's reading is then taken for a try at the word.
         if (!current.reading && !current.word && !sentenceRead && !skipped) {
@@ -140,6 +153,17 @@ export function createCoachState({ accent, done = [], focus = [] }) {
         };
       }
       return no(`unknown tool ${name}`);
+    },
+    // Nothing is on screen although the coach has spoken (it asked the learner to read without showing anything): the
+    // website shows what comes next by itself, the reading test or the next sentence. True when it did.
+    showDefault() {
+      if (current) return false;
+      if (!readingHeard) { current = { id: 'reading', text: readingFor(accent).join('\n'), word: null, reading: true }; readingSpoken = false; moved(); return true; }
+      const next = upNext()[0];
+      if (!next) return false;
+      moved(); sentenceRead = false;
+      current = { id: next.id, text: next.text, word: null, sound: next.sound };
+      return true;
     },
     // One more try at the current word (or sentence).
     noteTry() { tries++; sentenceRead = true; },

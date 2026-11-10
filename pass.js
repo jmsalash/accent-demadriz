@@ -35,10 +35,15 @@ export async function getPass({ native, accent, feedbackNative = false, focus = 
     }
   }
   try {
-    const res = await fetchImpl(`${base}/token`, {
-      method: 'POST', headers: headers(password), body: JSON.stringify({ native, accent, focus, done, ...(feedbackNative ? { feedbackNative: true } : {}) }),
+    const ask = (nativeName) => fetchImpl(`${base}/token`, {
+      method: 'POST', headers: headers(password), body: JSON.stringify({ native: nativeName, accent, focus, done, ...(feedbackNative ? { feedbackNative: true } : {}) }),
     });
-    const data = await res.json().catch(() => ({}));
+    let res = await ask(native);
+    let data = await res.json().catch(() => ({}));
+    // A service not yet updated does not know the regional names ("Spanish (Spain)"): it is asked again with the plain
+    // one, so practising still works (without the regional kind) until the owner puts the service online again.
+    const plain = String(native).match(/^(English|Spanish) \(/)?.[1];
+    if (res.status === 400 && data.error === 'choice' && plain) { res = await ask(plain); data = await res.json().catch(() => ({})); }
     if (res.ok && data.token) return { token: data.token, model: data.model, minutes: data.minutes || 10, ...(data.passId ? { passId: data.passId } : {}) };
     return { error: data.error || 'offline' };
   } catch {

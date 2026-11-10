@@ -23,10 +23,22 @@ export const ACCENTS = Object.freeze([
 ]);
 
 export const NATIVE_LANGUAGES = Object.freeze([
-  'Arabic', 'Bengali', 'Catalan', 'Chinese (Cantonese)', 'Chinese (Mandarin)', 'Dutch', 'English', 'French', 'German',
-  'Greek', 'Hindi', 'Indonesian', 'Italian', 'Japanese', 'Korean', 'Persian', 'Polish', 'Portuguese', 'Romanian',
-  'Russian', 'Spanish', 'Swedish', 'Tagalog', 'Thai', 'Turkish', 'Ukrainian', 'Urdu', 'Vietnamese',
+  'Arabic', 'Bengali', 'Catalan', 'Chinese (Cantonese)', 'Chinese (Mandarin)', 'Dutch', 'English (American)',
+  'English (British)', 'French', 'German', 'Greek', 'Hindi', 'Indonesian', 'Italian', 'Japanese', 'Korean', 'Persian',
+  'Polish', 'Portuguese', 'Romanian', 'Russian', 'Spanish (Latin America)', 'Spanish (Spain)', 'Swedish', 'Tagalog',
+  'Thai', 'Turkish', 'Ukrainian', 'Urdu', 'Vietnamese',
 ]);
+// Names an older page may still send: accepted, no longer offered.
+const OLD_NATIVE = ['English', 'Spanish'];
+export const isNativeLanguage = (name) => NATIVE_LANGUAGES.includes(name) || OLD_NATIVE.includes(name);
+// The regional kind of a native language: how the coach speaks it when it explains in that language.
+const NATIVE_KINDS = {
+  'Spanish (Spain)': 'the Spanish of Spain (Castilian): the accent of Spain, with the "th" sound for z and ce/ci, its vocabulary and expressions, and "vosotros" for the plural you. Never use Latin American words, forms or accent',
+  'Spanish (Latin America)': 'neutral Latin American Spanish: a Latin American accent with seseo (z and ce/ci sound like s), Latin American vocabulary and expressions, and "ustedes" for the plural you. Never use "vosotros" or the words and accent of Spain',
+  'English (British)': 'British English: a British accent (non-rhotic), British vocabulary and expressions. Never use American words or an American accent',
+  'English (American)': 'American English: a General American accent (rhotic), American vocabulary and expressions. Never use British words or a British accent',
+};
+export const nativeKind = (name) => NATIVE_KINDS[name] || '';
 
 const ENGLISH = [
   ['th (think, this)', [

@@ -85,7 +85,7 @@ export function startConversation({ getPass, transcript, coach, clips, onState, 
     const want = [...new Set(words(cur.text))];
     if (!want.length || want.filter((w) => heard.has(w)).length / want.length < READ_ENOUGH) return false;
     c.nudged = true;
-    c.live.say('[Note from the website: the learner has finished reading the text. If you have not given your feedback yet, give it now, once. Then call set_focus with the sounds that need the most work and show_sentence, and ask them to read it. Do not repeat feedback you already gave.]');
+    c.live.say('[Note from the website: the learner has finished reading the text. If you have not given your feedback yet, give it now, once. Then call set_focus with the sounds that need the most work (the first practice sentence then shows by itself) and ask them to read it. Do not repeat feedback you already gave.]');
     return true;
   };
   // The speech recogniser's text of the try is kept with its recording. The website does not make the coach answer a
@@ -208,8 +208,9 @@ export function startConversation({ getPass, transcript, coach, clips, onState, 
       if (change === 'focus') onFocus(coach.focus);
       if (change) onScreen(change);
       if (change === 'word' || change === 'sentence') c.turnMoved = true;
-      // A finished sentence brings the next one on screen in the same step.
-      if (change === 'done') { c.turnMoved = true; if (shown) onScreen('sentence'); }
+      if (change === 'done') c.turnMoved = true;
+      // A finished sentence, or the saved focus sounds, bring the next sentence on screen in the same step.
+      if (shown) { c.turnMoved = true; onScreen('sentence'); }
       return { id: call.id, name: call.name, response };
     });
     c.live.respond(answers);
@@ -259,6 +260,8 @@ export function startConversation({ getPass, transcript, coach, clips, onState, 
       case 'turnDone':
         transcript.turnDone();
         c.answering = false;
+        // The coach spoke but put nothing on screen: the website shows what comes next, so there is always something to read.
+        if (c.turnSpoke && coach.showDefault?.()) onScreen('sentence');
         c.turnSpoke = false;
         // A move the coach announced but has not made yet is waited for in the background: the learner's turn
         // starts straight away all the same.
